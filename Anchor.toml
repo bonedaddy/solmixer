@@ -1,0 +1,2 @@
+cluster = "localnet"
+wallet = "/home/solidity/.config/solana/id.json"

@@ -1,0 +1,11 @@
+{
+  "name": "solmixer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "bonedaddy <boned4ddy@protonmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@project-serum/anchor": "^0.5.0",
+    "mocha": "^8.4.0"
+  }
+}
