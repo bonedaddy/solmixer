@@ -46,11 +46,22 @@ describe("solmixer", () => {
         depositQ: depositQ.publicKey,
         authority: provider.wallet.publicKey,
       },
+      lamports: new anchor.BN(100),
     });
+    let laundro = await program.account.laundromat(laundromat.publicKey);
+    assert.ok(laundro.totalUnwashedFunds.eq(new anchor.BN(100)));
     let depositq = await program.account.depositQ(depositQ.publicKey);
     assert.ok(depositq.numDeposits.eq(new anchor.BN(1)));
     assert.ok(depositq.deposits[0].from.equals(provider.wallet.publicKey));
     assert.ok(depositq.deposits[0].amount.eq(new anchor.BN(100)));
   })
-
+  it("tumbles laundromat", async () => {
+    await program.rpc.tumbleLaundromat({
+      accounts: {
+        laundromat: laundromat.publicKey,
+        depositQ: depositQ.publicKey,
+        authority: provider.wallet.publicKey,
+      },
+    })
+  })
 });

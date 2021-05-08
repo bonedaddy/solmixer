@@ -32,7 +32,12 @@ pub mod solmixer {
         if ctx.accounts.authority.lamports() < amount {
             return Err(ErrorCode::Insufficientfunds.into());
         }
+        ctx.remaining_accounts.len();
+        // **ctx.accounts.authority.lamports.borrow_mut() -= amount;
+        //**ctx.accounts.authority.try_borrow_mut_lamports()? -= amount;
+        **ctx.accounts.laundromat.to_account_info().try_borrow_mut_lamports()? += amount;
         let deposit_q = &mut ctx.accounts.deposit_q.load_mut()?;
+        // todo(bonedaddy): trigger automatic sweeping
         if deposit_q.num_deposits + 1 > 25000 {
             return Err(ErrorCode::TooManyDeposits.into());
         }
@@ -42,6 +47,23 @@ pub mod solmixer {
             amount: amount,
         };
         deposit_q.num_deposits += 1;
+        ctx.accounts.laundromat.total_unwashed_funds = ctx.accounts.laundromat.total_unwashed_funds.checked_add(
+            amount,
+        ).unwrap();
+        Ok(())
+    }
+    pub fn tumble_laundromat(ctx: Context<TumbleLaundromat>) -> Result<()> {
+        let deposit_q = &mut ctx.accounts.deposit_q.load_mut()?;
+        let mut total_deposits: u64 = 0;
+        for i in 0..deposit_q.num_deposits {
+            // first empty deposit indicating that we have no more to tumble
+            if deposit_q.deposits[i as usize].amount == 0 {
+                break
+            }
+            total_deposits = total_deposits.checked_add(deposit_q.deposits[i as usize].amount).unwrap();
+            deposit_q.deposits[i as usize].amount = 0;
+            deposit_q.deposits[i as usize].from = Pubkey::default();
+        }
         Ok(())
     }
 }
@@ -52,6 +74,15 @@ pub struct Auth<'info> {
     pub authority: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct TumbleLaundromat<'info> {
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub laundromat: ProgramAccount<'info, Laundromat>,
+    #[account(mut)]
+    pub deposit_q: Loader<'info, DepositQ>,
+}
 
 #[derive(Accounts)]
 pub struct CreateLaundromat<'info> {
@@ -67,7 +98,7 @@ pub struct CreateLaundromat<'info> {
 
 #[derive(Accounts)]
 pub struct DepositIntoLaundromat<'info> {
-    #[account(signer)]
+    #[account(mut, signer)]
     pub authority: AccountInfo<'info>,
     #[account(mut)]
     pub laundromat: ProgramAccount<'info, Laundromat>,
